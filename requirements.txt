@@ -1,0 +1,8 @@
+playwright==1.65.2
+obsws-python==1.8.1
+PyYAML==6.0.4
+imageio-ffmpeg==0.8.1
+mcp==2.3.0
+fastapi==0.162.5
+uvicorn==0.54.0
+python-multipart==0.0.32

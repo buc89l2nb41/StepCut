@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "stepcut": {
+      "command": "D:/Claude/StepCut/.venv/Scripts/python.exe",
+      "args": ["-m", "stepcut", "mcp"],
+      "cwd": "D:/Claude/StepCut"
+    }
+  }
+}

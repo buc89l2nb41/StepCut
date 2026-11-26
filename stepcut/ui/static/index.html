@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StepCut</title>
+<meta name="stepcut-token" content="__TOKEN__">
+<style>
+:root{--bg:#0f1115;--panel:#161a21;--panel2:#1c212a;--line:#2a313c;--text:#e7e9ee;--dim:#9aa3b2;--accent:#ff3d5a;--ok:#3ecf8e;--warn:#f5b84b;--err:#ff6b6b;--blue:#5aa9ff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.5 'Malgun Gothic','Segoe UI',sans-serif}
+button{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:#3a4352}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.go{background:#1f6f4a;border-color:#2a8a5e}
+button:disabled{opacity:.45;cursor:not-allowed}
+textarea,input,select{font:inherit;color:var(--text);background:#0c0e12;border:1px solid var(--line);border-radius:6px;padding:8px}
+textarea{width:100%;resize:vertical}
+header{height:48px;display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{font-weight:800;font-size:18px}.brand span{color:var(--accent)}
+#status{margin-left:auto;color:var(--dim);font-size:13px;display:flex;gap:12px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--dim);display:inline-block;margin-right:6px}
+.dot.on{background:var(--accent);animation:blink 1s infinite}@keyframes blink{50%{opacity:.3}}
+main{display:grid;grid-template-columns:210px minmax(360px,1fr) minmax(380px,1.05fr);height:calc(100% - 48px)}
+aside{border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:12px}
+aside h3,.sec h3{margin:4px 0 10px;font-size:12px;letter-spacing:.08em;color:var(--dim);font-weight:600;text-transform:uppercase}
+.proj{padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px}
+.proj:hover{background:var(--panel2)}.proj.active{background:#2a1a20;outline:1px solid var(--accent)}
+.proj small{display:block;color:var(--dim)}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);margin-left:4px}
+.badge.ok{color:var(--ok);border-color:#24573f}.badge.warn{color:var(--warn);border-color:#5c4a24}.badge.err{color:var(--err);border-color:#5c2a2a}
+#chat{display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0}
+#msgs{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:92%;padding:10px 12px;border-radius:10px;white-space:pre-wrap;word-break:break-word}
+.msg.user{align-self:flex-end;background:#26303d}
+.msg.comment{align-self:flex-end;background:#2c2333;border:1px solid #4a3657}
+.msg.agent{align-self:flex-start;background:var(--panel2);border:1px solid var(--line)}
+.msg .meta{font-size:11px;color:var(--dim);margin-top:6px}
+.tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tool{font-size:11px;padding:1px 6px;border-radius:4px;background:#11151b;border:1px solid var(--line);color:var(--blue)}
+.tool.running{color:var(--warn)}
+#composer{border-top:1px solid var(--line);padding:10px;background:var(--panel)}
+#composer .row{display:flex;gap:8px;margin-top:8px;align-items:center}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{font-size:12px;padding:3px 9px;border-radius:12px;background:#11151b;border:1px solid var(--line);cursor:pointer;color:var(--dim)}
+.chip:hover{color:var(--text)}
+#right{overflow:auto;display:flex;flex-direction:column}
+.sec{padding:12px 14px;border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:4px;margin-bottom:10px}.tabs button{padding:4px 10px;font-size:13px}.tabs button.on{border-color:var(--accent);color:#fff}
+.step{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:7px 0;border-bottom:1px dashed #232a34}
+.step .n{color:var(--dim);font-size:12px;text-align:right;padding-top:2px}
+.step .cap{color:var(--text)}.step .id{font-size:12px;color:var(--dim)}
+.step.paid .id::after{content:" · 유료 단계";color:var(--warn)}
+.feat{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+#drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--dim)}
+#drop.over{border-color:var(--accent);color:var(--text)}
+.ref{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #232a34;font-size:13px}
+.ref a{color:var(--blue);text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis}
+video{width:100%;border-radius:8px;background:#000;max-height:360px}
+#timeline{position:relative;height:30px;background:#0c0e12;border:1px solid var(--line);border-radius:6px;margin-top:8px;cursor:pointer;overflow:hidden}
+#timeline .seg{position:absolute;top:0;bottom:0;border-right:1px solid #000;font-size:10px;color:#cfd6e2;padding:2px 4px;overflow:hidden;white-space:nowrap}
+#timeline .head{position:absolute;top:0;bottom:0;width:2px;background:var(--accent)}
+.check li{margin:2px 0}.check .e{color:var(--err)}.check .w{color:var(--warn)}.check .n{color:var(--dim)}
+#joblog{font:12px/1.4 Consolas,monospace;background:#0b0d11;border:1px solid var(--line);border-radius:6px;padding:8px;max-height:160px;overflow:auto;white-space:pre-wrap;color:#b8c0cc;display:none}
+.empty{color:var(--dim);padding:24px;text-align:center}
+.hint{font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Step<span>Cut</span></div>
+  <div class="hint">영상 계획을 에이전트와 의논하고, 승인한 뒤 녹화합니다</div>
+  <div id="status"><span id="recstate"><span class="dot"></span>대기</span><span id="jobstate"></span></div>
+</header>
+<main>
+  <aside>
+    <h3>프로젝트</h3>
+    <div id="projects"></div>
+    <button id="newproj" style="width:100%;margin-top:8px">+ 새 프로젝트</button>
+  </aside>
+
+  <section id="chat">
+    <div id="msgs"><div class="empty">왼쪽에서 프로젝트를 고르세요.</div></div>
+    <div id="composer">
+      <div class="chips" id="chips"></div>
+      <textarea id="input" rows="3" placeholder="영상을 어떻게 만들지 적어 주세요. (Ctrl+Enter로 보내기)"></textarea>
+      <div class="row">
+        <button class="primary" id="send">보내기</button>
+        <button id="stop">멈추기</button>
+        <select id="model" title="이번 대화에 쓸 Cursor 모델" style="max-width:200px"></select>
+        <span class="hint" id="chatinfo"></span>
+        <button id="reset" style="margin-left:auto">새 대화</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="right">
+    <div class="sec">
+      <h3>계획</h3>
+      <div class="tabs" id="tabs">
+        <button data-tab="steps" class="on">단계</button>
+        <button data-tab="brief">brief.yaml</button>
+        <button data-tab="scenario">scenario.yaml</button>
+        <button data-tab="refs">참고 자료</button>
+      </div>
+      <div id="tab-steps"></div>
+      <div id="tab-brief" style="display:none"><textarea id="briefText" rows="16"></textarea><div class="actions"><button id="saveBrief">brief 저장</button></div></div>
+      <div id="tab-scenario" style="display:none"><textarea id="scenText" rows="18"></textarea><div class="actions"><button id="saveScen">시나리오 저장</button><span class="hint">저장하면 승인이 풀립니다</span></div></div>
+      <div id="tab-refs" style="display:none">
+        <div id="drop">참고할 영상·이미지·글 파일을 여기에 끌어다 놓으세요
+          <div style="margin-top:8px"><select id="refUse"><option value="pacing">pacing (흐름·속도 참고)</option><option value="must_look_like">must_look_like (이런 화면이 나와야 함)</option><option value="captions">captions (자막 말투)</option><option value="style">style</option><option value="info" selected>info (그 밖의 정보)</option></select>
+          <input id="refNote" placeholder="메모 (예: 0:12~0:20처럼 결과를 오래)" style="width:60%"></div>
+          <input type="file" id="refFile" multiple style="margin-top:8px">
+        </div>
+        <div id="refs"></div>
+      </div>
+      <div class="actions">
+        <button id="dry">시험 실행</button>
+        <label class="hint"><input type="checkbox" id="paid"> 유료 단계 포함</label>
+        <button class="go" id="approve">승인</button>
+        <button class="primary" id="record">녹화</button>
+        <span id="apprstate" class="badge"></span>
+      </div>
+      <div id="joblog" style="margin-top:8px"></div>
+    </div>
+
+    <div class="sec">
+      <h3>영상</h3>
+      <div class="actions" style="margin-top:0">
+        <select id="runs"></select>
+        <button id="renderPrev">미리보기 렌더</button>
+        <button id="renderFinal">최종 렌더</button>
+      </div>
+      <div id="review"><div class="empty">녹화한 영상이 아직 없습니다.</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const TOKEN = document.querySelector('meta[name=stepcut-token]').content;
+const $ = (s) => document.querySelector(s);
+const S = {project: null, data: null, run: null, runInfo: null, polling: null, job: null, lastMsgCount: -1};
+
+async function api(path, opts = {}) {
+  const o = Object.assign({headers: {}}, opts);
+  o.headers['X-StepCut-Token'] = TOKEN;
+  if (o.json !== undefined) { o.method = o.method || 'POST'; o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(o.json); }
+  const r = await fetch(path, o);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail || j.error || r.statusText);
+  return j;
+}
+const esc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+// ---------------------------------------------------------------- projects
+async function loadProjects() {
+  const j = await api('/api/projects');
+  const box = $('#projects'); box.innerHTML = '';
+  for (const p of j.projects) {
+    const el = document.createElement('div');
+    el.className = 'proj' + (p.project === S.project ? ' active' : '');
+    el.innerHTML = `${esc(p.title)}${p.approved ? '<span class="badge ok">승인</span>' : p.has_scenario ? '<span class="badge warn">초안</span>' : '<span class="badge">새</span>'}<small>${esc(p.project)} · 영상 ${p.runs}</small>`;
+    el.onclick = () => openProject(p.project);
+    box.appendChild(el);
+  }
+  const rec = $('#recstate');
+  rec.innerHTML = j.recording ? '<span class="dot on"></span>녹화/시험 실행 중' : '<span class="dot"></span>대기';
+}
+
+async function openProject(name) {
+  S.project = name; S.lastMsgCount = -1;
+  await loadProjects();
+  await loadProject();
+  await loadChat(true);
+}
+
+async function loadProject() {
+  if (!S.project) return;
+  const d = S.data = await api(`/api/p/${S.project}`);
+  // steps
+  const b = d.brief_obj || {};
+  const feats = [...(b.must_show || []).map(f => [f, 'must']), ...(b.nice_to_show || []).map(f => [f, 'nice'])];
+  let h = '';
+  if (feats.length) h += '<div class="feat">' + feats.map(([f, l]) => `<span class="badge ${l === 'must' ? 'ok' : ''}" title="${esc(f.what)}">${l === 'must' ? '꼭' : '있으면'} · ${esc(f.id)}</span>`).join('') + '</div>';
+  if (!d.steps.length) h += '<div class="empty">시나리오가 아직 없습니다. 채팅으로 계획을 의논해 보세요.</div>';
+  d.steps.forEach((s, i) => {
+    h += `<div class="step ${s.paid ? 'paid' : ''}"><div class="n">${i + 1}</div><div><div class="cap">${esc(s.caption) || '<span class="hint">(자막 없음)</span>'}</div><div class="id">${esc(s.id)} · ${esc(s.do)}${s.feature ? ' · ' + esc(s.feature) : ''}${s.hold ? ' · ' + s.hold + '초' : ''}</div></div></div>`;
+  });
+  $('#tab-steps').innerHTML = h;
+  if (document.activeElement !== $('#briefText')) $('#briefText').value = d.brief;
+  if (document.activeElement !== $('#scenText')) $('#scenText').value = d.scenario;
+  // refs
+  $('#refs').innerHTML = (d.references || []).map(r => `<div class="ref"><span class="badge">${esc(r.use)}</span><a href="/api/p/${S.project}/refs/file?file=${encodeURIComponent(r.file)}" target="_blank">${esc(r.file)}</a><span class="hint">${esc(r.note || '')}</span><button data-del="${esc(r.file)}">빼기</button></div>`).join('')
+    + ((d.style || []).length ? `<div class="hint" style="margin-top:8px">공통 규칙: ${d.style.map(s => esc(s.file)).join(', ')}</div>` : '');
+  $('#refs').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { await api(`/api/p/${S.project}/refs?file=${encodeURIComponent(b.dataset.del)}`, {method: 'DELETE'}); loadProject(); });
+  // approval
+  const a = d.approval;
+  $('#apprstate').className = 'badge ' + (a.approved ? 'ok' : a.stale ? 'warn' : '');
+  $('#apprstate').textContent = a.approved ? `승인됨 ${a.at || ''}${a.allow_paid ? ' · 유료 허용' : ''}` : a.stale ? '시나리오가 바뀌어 승인이 풀림' : '승인 전';
+  $('#record').disabled = !a.approved;
+  // runs
+  const sel = $('#runs'); const prev = S.run;
+  sel.innerHTML = d.runs.map(r => `<option value="${esc(r.run)}">${esc(r.run.split('/')[1])}${r.final ? ' · 최종' : r.preview ? ' · 미리보기' : ''}${r.recorder === 'playwright' ? ' · 시험' : ''}</option>`).join('');
+  const keep = d.runs.find(r => r.run === prev) ? prev : (d.runs.find(r => r.recorder !== 'playwright') || d.runs[0] || {}).run;
+  if (keep) { sel.value = keep; if (keep !== prev || !S.runInfo) loadRun(keep); } else { S.run = null; $('#review').innerHTML = '<div class="empty">녹화한 영상이 아직 없습니다.</div>'; }
+}
+
+// ---------------------------------------------------------------- chat
+function renderMsgs(st) {
+  const box = $('#msgs');
+  const msgs = st.messages || [];
+  let h = '';
+  for (const m of msgs) {
+    if (m.role === 'user') h += `<div class="msg ${m.kind === 'comment' ? 'comment' : 'user'}">${esc(m.text)}</div>`;
+    else h += `<div class="msg agent">${esc(m.text) || (m.error ? '' : '(빈 답)')}${m.error ? `<div class="meta" style="color:var(--err)">${esc(m.error)}</div>` : ''}${(m.tools || []).length ? '<div class="tools">' + m.tools.map(t => `<span class="tool">${esc(t)}</span>`).join('') + '</div>' : ''}<div class="meta">${esc(m.model || '')}${m.seconds ? ' · ' + m.seconds + '초' : ''}</div></div>`;
+  }
+  const lv = st.live;
+  if (lv && lv.running) {
+    h += `<div class="msg agent">${esc(lv.text) || '<span class="hint">생각하는 중…</span>'}${lv.tools.length ? '<div class="tools">' + lv.tools.map(t => `<span class="tool ${t.state}">${esc(t.name)}</span>`).join('') + '</div>' : ''}<div class="meta">${esc(lv.model || lv.model_id || '')} · ${Math.round((Date.now() / 1000) - lv.started)}초째</div></div>`;
+  }
+  if (!h) h = '<div class="empty">어떤 영상을 만들지 적어 보세요. 예: "README 보고 40초 계획 초안 만들어 줘"</div>';
+  const atBottom = box.scrollTop + box.clientHeight > box.scrollHeight - 60;
+  box.innerHTML = h;
+  if (atBottom || msgs.length !== S.lastMsgCount) box.scrollTop = box.scrollHeight;
+  S.lastMsgCount = msgs.length;
+  $('#send').disabled = !!(lv && lv.running);
+  $('#chatinfo').textContent = lv && lv.running ? '에이전트가 답하는 중' : '';
+}
+
+async function loadChat(force) {
+  if (!S.project) return;
+  const st = await api(`/api/p/${S.project}/chat`);
+  renderMsgs(st);
+  const running = st.live && st.live.running;
+  if (S.wasRunning && !running) { loadProject(); loadProjects(); }
+  S.wasRunning = running;
+}
+
+async function send(text) {
+  text = (text ?? $('#input').value).trim();
+  if (!text || !S.project) return;
+  try { await api(`/api/p/${S.project}/chat`, {json: {text, model: $('#model').value || null}}); $('#input').value = ''; loadChat(); }
+  catch (e) { alert(e.message); }
+}
+$('#send').onclick = () => send();
+$('#input').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send(); });
+$('#stop').onclick = () => S.project && api(`/api/p/${S.project}/chat/stop`, {json: {}});
+$('#reset').onclick = async () => { if (S.project && confirm('대화를 처음부터 다시 시작할까요? (계획 파일은 그대로)')) { await api(`/api/p/${S.project}/chat/reset`, {json: {}}); loadChat(); } };
+const CHIPS = ['README와 brief를 보고 40초 영상 계획 초안을 만들어 줘', '참고 자료를 보고 흐름을 맞춰 줘', '시험 실행(dry_run)하고 결과 알려 줘', '자막을 더 짧고 쉽게 다듬어 줘', '지금 계획을 한 번에 정리해 줘'];
+$('#chips').innerHTML = CHIPS.map(c => `<span class="chip">${esc(c)}</span>`).join('');
+$('#chips').querySelectorAll('.chip').forEach(c => c.onclick = () => { $('#input').value = c.textContent; $('#input').focus(); });
+
+// ---------------------------------------------------------------- plan tabs & files
+$('#tabs').querySelectorAll('button').forEach(b => b.onclick = () => {
+  $('#tabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  for (const t of ['steps', 'brief', 'scenario', 'refs']) $('#tab-' + t).style.display = t === b.dataset.tab ? '' : 'none';
+});
+async function saveFile(name, text) { try { await api(`/api/p/${S.project}/file/${name}`, {method: 'PUT', json: {text}}); loadProject(); } catch (e) { alert(e.message); } }
+$('#saveBrief').onclick = () => saveFile('brief.yaml', $('#briefText').value);
+$('#saveScen').onclick = () => saveFile('scenario.yaml', $('#scenText').value);
+
+async function uploadRefs(files) {
+  for (const f of files) {
+    const fd = new FormData(); fd.append('file', f); fd.append('use', $('#refUse').value); fd.append('note', $('#refNote').value);
+    await fetch(`/api/p/${S.project}/refs`, {method: 'POST', body: fd, headers: {'X-StepCut-Token': TOKEN}});
+  }
+  $('#refNote').value = ''; loadProject();
+}
+const drop = $('#drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (S.project) uploadRefs(e.dataTransfer.files); });
+$('#refFile').onchange = e => { if (S.project) uploadRefs(e.target.files); e.target.value = ''; };
+
+$('#newproj').onclick = async () => {
+  const name = prompt('프로젝트 이름 (영문, 예: lowpoly)'); if (!name) return;
+  const repo = prompt('저장소 폴더 (예: D:/Cursor/LowPolyCultivar)', '') || '';
+  try { const r = await api('/api/projects', {json: {name, repo, title: name}}); openProject(r.project); } catch (e) { alert(e.message); }
+};
+
+// ---------------------------------------------------------------- actions & jobs
+async function startJob(path, body) {
+  try { const r = await api(path, {json: body || {}}); if (!r.ok) throw new Error(r.error); S.job = r.job; $('#joblog').style.display = 'block'; pollJob(); }
+  catch (e) { alert(e.message); }
+}
+$('#dry').onclick = () => S.project && startJob(`/api/p/${S.project}/dry_run`);
+$('#approve').onclick = async () => {
+  if (!S.project) return;
+  const paid = $('#paid').checked;
+  if (!confirm(`지금 시나리오를 승인할까요?${paid ? '\n유료 단계(돈이 나가는 생성)도 허용합니다.' : ''}`)) return;
+  try { await api(`/api/p/${S.project}/approve`, {json: {allow_paid: paid}}); loadProject(); loadProjects(); } catch (e) { alert(e.message); }
+};
+$('#record').onclick = () => {
+  if (!S.project) return;
+  if (!confirm('녹화를 시작할까요? 약 1분 동안 앱이 전체 화면으로 뜨고, OBS가 앱 창만 녹화합니다.')) return;
+  startJob(`/api/p/${S.project}/record`, {allow_paid: $('#paid').checked});
+};
+
+async function pollJob() {
+  if (!S.job) return;
+  const j = await api(`/api/jobs/${S.job}`);
+  $('#joblog').textContent = `[${j.kind}] ${j.state} · ${j.elapsed_s}s\n` + (j.log_tail || []).join('\n') + (j.error ? `\n오류: ${j.error}` : '');
+  $('#joblog').scrollTop = 1e9;
+  $('#jobstate').textContent = j.state === 'running' ? `${j.kind} 진행 중 ${j.elapsed_s}s` : '';
+  if (j.state === 'running') return;
+  const res = j.result || {};
+  if (j.kind === 'dry' && res.steps) {
+    const bad = res.steps.filter(s => !s.ok);
+    $('#joblog').textContent += `\n\n시험 실행 ${res.ok ? '통과' : '실패'}: ${res.steps.length - bad.length}/${res.steps.length} 단계` + bad.map(s => `\n  ✗ ${s.id}: ${s.error}`).join('');
+  }
+  if (j.kind === 'run' && res.run) { S.run = res.run; }
+  S.job = null; loadProjects(); loadProject();
+  if (S.run) loadRun(S.run);
+}
+
+// ---------------------------------------------------------------- review
+$('#runs').onchange = e => loadRun(e.target.value);
+$('#renderPrev').onclick = () => S.run && startJob(`/api/runs/${S.run}/render`, {quality: 'preview'});
+$('#renderFinal').onclick = () => S.run && startJob(`/api/runs/${S.run}/render`, {quality: 'final'});
+
+async function loadRun(run) {
+  S.run = run;
+  let info;
+  try { info = S.runInfo = await api(`/api/runs/${run}/info`); } catch (e) { $('#review').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  const src = info.videos.final || info.videos.preview;
+  if (!src) { $('#review').innerHTML = '<div class="empty">렌더가 없습니다. 미리보기 렌더를 눌러 주세요.</div>'; return; }
+  const total = info.final_seconds || 1;
+  const segs = info.steps.filter(s => s.output).map((s, i) => {
+    const l = s.output[0] / total * 100, w = (s.output[1] - s.output[0]) / total * 100;
+    const hue = (i * 47) % 360;
+    return `<div class="seg" data-t="${s.output[0]}" title="${esc(s.id)}: ${esc(s.caption)}" style="left:${l}%;width:${w}%;background:hsla(${hue},45%,35%,.8)">${esc(s.id)}</div>`;
+  }).join('');
+  const c = info.check;
+  const chk = c ? `<ul class="check">${c.errors.map(x => `<li class="e">✗ ${esc(x)}</li>`).join('')}${c.warnings.map(x => `<li class="w">! ${esc(x)}</li>`).join('')}${c.notes.map(x => `<li class="n">· ${esc(x)}</li>`).join('')}${(c.coverage || []).map(f => `<li class="${f.shown ? 'n' : 'e'}">${f.shown ? '✓' : '✗'} ${esc(f.id)} ${f.shown ? f.at + '초' : '빠짐'}</li>`).join('')}</ul>` : '';
+  $('#review').innerHTML = `
+    <video id="player" src="${src}?v=${Date.now()}" controls preload="metadata"></video>
+    <div id="timeline">${segs}<div class="head" id="head"></div></div>
+    <div class="actions"><input id="cmt" placeholder="지금 재생 위치에 대한 코멘트 (예: 자막이 너무 빨라요)" style="flex:1"><button class="primary" id="cmtSend">코멘트 보내기</button></div>
+    <div class="hint">${esc(run)} · ${info.final_seconds}초 · 싱크 보정 ${Math.round((info.sync.offset_s || 0) * 1000)}ms · 확대 ${info.zoom_groups}곳 ${c ? (c.ok ? '<span class="badge ok">검사 통과</span>' : '<span class="badge err">검사 실패</span>') : ''}</div>
+    ${chk}`;
+  const v = $('#player');
+  v.ontimeupdate = () => { $('#head').style.left = (v.currentTime / total * 100) + '%'; };
+  $('#timeline').onclick = e => { const r = e.currentTarget.getBoundingClientRect(); v.currentTime = (e.clientX - r.left) / r.width * total; };
+  $('#cmtSend').onclick = async () => {
+    const text = $('#cmt').value.trim(); if (!text) return;
+    try { await api(`/api/runs/${run}/comment`, {json: {t: v.currentTime, text, project: S.project, model: $('#model').value || null}}); $('#cmt').value = ''; loadChat(); } catch (e) { alert(e.message); }
+  };
+}
+
+// ---------------------------------------------------------------- models
+async function loadModels() {
+  const sel = $('#model');
+  sel.innerHTML = '<option value="">모델 목록 불러오는 중…</option>';
+  try {
+    const j = await api('/api/models');
+    const saved = (() => { try { return localStorage.getItem('stepcut-model'); } catch { return null; } })();
+    const ids = new Set(j.models.map(m => m.id));
+    const def = j.default;
+    const first = j.models.filter(m => m.id === def);
+    const rest = j.models.filter(m => m.id !== def);
+    sel.innerHTML = (first.length ? first : [{id: def, name: def}]).map(m => `<option value="${esc(m.id)}">기본 · ${esc(m.name)}</option>`).join('')
+      + rest.map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
+    sel.value = saved && (ids.has(saved) || saved === def) ? saved : def;
+  } catch (e) { sel.innerHTML = '<option value="">기본 모델</option>'; }
+}
+$('#model').onchange = e => { try { localStorage.setItem('stepcut-model', e.target.value); } catch {} };
+loadModels();
+
+// ---------------------------------------------------------------- loop
+setInterval(() => { loadChat().catch(() => {}); }, 1200);
+setInterval(() => { pollJob().catch(() => {}); loadProjects().catch(() => {}); }, 2500);
+loadProjects().then(() => { const first = document.querySelector('.proj'); if (first) first.click(); });
+</script>
+</body>
+</html>

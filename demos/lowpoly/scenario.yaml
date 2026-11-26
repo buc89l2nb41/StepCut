@@ -1,0 +1,92 @@
+project: Low Poly Cultivar
+driver: web
+app:
+  url: http://localhost:5173/
+  ready: http://localhost:3001/api/health
+  start:
+    cmd: npm run dev
+    cwd: D:/Cursor/LowPolyCultivar
+    timeout: 90
+window:
+  title: LowPoly Cultivar
+  fullscreen: true
+  scale: 1.25
+record:
+  scene: StepCut
+retries: 2
+edit:
+  wait: speed
+  speed: 8
+  keep: 0.4
+  auto_wait: 2.0
+  lead_in: 0.6
+  tail: 1.2
+  min_caption: 1.8
+
+steps:
+  - id: open
+    do: goto
+    caption: LowPoly Cultivar는 GLB 모델을 가볍게 줄이는 로컬 도구입니다.
+    expect: {text: LowPoly Cultivar}
+    hold: 3.4
+
+  - id: upload-glb
+    feature: upload-glb
+    do: upload
+    target: 'label.file-label'
+    file: D:/Cursor/LowPolyCultivar/test-duck.glb
+    caption: 먼저 줄이고 싶은 GLB 모델을 한 개 올립니다.
+    expect: {text: test-duck.glb}
+    hold: 3.0
+
+  - id: generate-all
+    feature: generate-all
+    do: click
+    target: {role: button, name: /Generate All/}
+    caption: 프리셋 여러 개로 한꺼번에 줄여 봅니다.
+    hold: 2.4
+
+  - id: wait-generate
+    do: wait
+    kind: wait
+    until: {js: "() => document.querySelectorAll('.list-item').length > 5"}
+    timeout: 600
+    caption: 모델을 줄이는 동안은 빠르게 넘깁니다.
+
+  - id: show-results
+    feature: generate-all
+    do: scroll
+    target: {role: heading, name: Cultivar Comparison}
+    caption: 면 수와 크기가 줄어든 결과가 목록에 나옵니다.
+    expect: {visible: '.list-item'}
+    hold: 5.5
+
+  - id: open-result
+    feature: generate-all
+    do: click
+    target: '.list-item:not(.original) >> nth=0'
+    caption: 목록에서 결과 하나를 누르면 3D로 원본과 비교해 볼 수 있습니다.
+    expect: {visible: 'canvas'}
+    hold: 6.0
+
+  - id: run-sprite
+    feature: sprite-compare
+    do: click
+    target: {role: button, name: 스프라이트 비교, exact: true}
+    caption: 스프라이트 비교는 4각도 화면의 차이를 점수로 냅니다.
+    hold: 3.6
+
+  - id: wait-sprite
+    do: wait
+    kind: wait
+    until: {js: "() => document.querySelectorAll('.sprite-badge').length > 0"}
+    timeout: 600
+    caption: 비교가 끝날 때까지 빠르게 넘깁니다.
+
+  - id: show-scores
+    feature: sprite-compare
+    do: hover
+    target: '.sprite-badge >> nth=0'
+    caption: 점수가 낮을수록 원본과 비슷합니다.
+    expect: {visible: '.sprite-badge >> nth=0'}
+    hold: 6.5

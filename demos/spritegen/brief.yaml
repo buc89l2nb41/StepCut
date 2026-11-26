@@ -1,0 +1,31 @@
+# What the SpriteGen demo video must show. Edit freely; the agent reads this before
+# drafting scenario.yaml, and `check` reports whether every must_show item made the cut.
+project: SpriteGen
+repo: D:/Cursor/SpriteGen
+title: SpriteGen
+tagline: 캐릭터 그림 한 장으로 같은 캐릭터의 스프라이트 8장을 만드는 로컬 도구
+links: [github.com/buc89l2nb41/SpriteGen]
+length: [30, 60]          # target seconds (min, max)
+audience: 데모 영상을 보는 개발자
+
+must_show:
+  - id: reference-character
+    what: 기준 캐릭터 그림 한 장을 올린다
+  - id: text-method
+    what: 동작을 문장으로 적으면 영상 모델에 보낼 문장이 자동으로 만들어진다
+  - id: eight-frames
+    what: 결과가 같은 캐릭터의 8칸 스프라이트로 나온다
+    how: 지난 결과 #23 (문장참고 · 주먹) 열기
+  - id: source-video
+    what: 칸을 뽑아 낸 원본 영상을 함께 볼 수 있다
+
+nice_to_show:
+  - id: video-method
+    what: 영상참고로 만든 승룡권 결과
+    how: 지난 결과 #22 열기
+  - id: pose-method
+    what: 3D 몸의 관절을 고쳐 포즈를 정하는 화면
+
+avoid:
+  - 돈이 나가는 생성 버튼 누르기 (allow_paid 없이)
+  - .env, API 키, 개인 계정이 보이는 화면

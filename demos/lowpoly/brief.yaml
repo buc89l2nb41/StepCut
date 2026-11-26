@@ -1,0 +1,20 @@
+project: Low Poly Cultivar
+repo: D:/Cursor/LowPolyCultivar
+title: Low Poly Cultivar
+tagline: ''
+links: []
+length:
+- 30
+- 60
+must_show:
+- id: upload-glb
+  what: GLB 모델 한 개를 올린다
+  how: test-duck.glb 업로드
+- id: generate-all
+  what: 프리셋 여러 개로 한꺼번에 줄인 결과가 비교 목록에 나온다
+- id: sprite-compare
+  what: 4각도 스프라이트 비교로 원본과의 유사도 점수가 붙는다
+nice_to_show: []
+avoid:
+- .env, API 키, 개인 계정이 보이는 화면
+references: []

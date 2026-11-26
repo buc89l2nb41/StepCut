@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Mcp(stepcut:*)",
+      "Read(**)"
+    ],
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Shell(*)",
+      "Write(**)",
+      "WebFetch(*)"
+    ]
+  }
+}

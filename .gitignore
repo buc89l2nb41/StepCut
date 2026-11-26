@@ -1,0 +1,22 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# local environment / caches
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+
+# recordings, renders and per-machine state
+runs/
+*.mp4
+*.webm
+*.mov
+*.mkv
+*.log
+demos/*/refs/
+demos/*/chat/
+demos/*/history/
+demos/*/.approval.json
