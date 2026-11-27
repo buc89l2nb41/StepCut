@@ -32,7 +32,9 @@ def measure(video: Path, log: dict, fps: float) -> dict:
         t = log.get(key)
         if t is None:
             continue
-        seen = find_marker(video, t, fps)
+        # the end marker is looked for where the start marker says the video has shifted to
+        shift = offsets[0] if offsets else 0.0
+        seen = find_marker(video, t + shift, fps)
         out[key] = {"logged": t, "video": None if seen is None else round(seen, 4)}
         if seen is not None:
             offsets.append(seen - t)

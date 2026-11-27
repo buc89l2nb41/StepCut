@@ -2,7 +2,7 @@
 
 **상태 (2026-11-26)**: 1~5단계 완료. 웹 UI(채팅으로 계획 → 승인 → 녹화 → 코멘트로 수정)와 참고 자료 첨부 추가. SpriteGen 영상 1편을 Cursor agent가 4분 44초에 완성 (재촬영 0회). 실측은 [README.md](README.md)에 있습니다.
 
-이름: **StepCut** (단계별로 기록하고, 단계별로 자릅니다). 코드 패키지는 `stepcut/`, OBS 장면은 `StepCut`입니다. 폴더 `D:\Claude\StepCut` 이름은 아직 그대로입니다.
+이름: **StepCut** (단계별로 기록하고, 단계별로 자릅니다). 코드 패키지는 `stepcut/`입니다. 폴더 `D:\Claude\StepCut` 이름은 아직 그대로입니다.
 
 영상에 꼭 보여 줄 프로젝트 기능은 `demos/<프로젝트>/brief.yaml`에 적습니다 (아래 "보여 줄 기능").
 
@@ -12,7 +12,7 @@
 Claude는 화면을 클릭하지 않고 **MCP 도구만 불러서** 녹화하고 편집합니다. 사람은 완성된 MP4를 보고 확인만 합니다.
 
 ```
-brief.yaml ─(에이전트가 초안)─▶ scenario.yaml ─(사람 승인)─run_scenario──▶ OBS 녹화 + 단계 로그
+brief.yaml ─(에이전트가 초안)─▶ scenario.yaml ─(사람 승인)─run_scenario──▶ 화면 녹화 + 단계 로그
                                           │
                      에이전트가 MCP 도구로 확인·수정 (get_frames, set_caption, trim_step …)
                                           │
@@ -38,7 +38,7 @@ brief.yaml ─(에이전트가 초안)─▶ scenario.yaml ─(사람 승인)─
 ## 이미 있는 것 (재사용)
 
 - `stepcut/web.py`: Playwright 드라이버. 역할·라벨·텍스트로 요소를 찾고(화면 좌표 클릭 없음), 화면에 가짜 커서를 그립니다
-- `stepcut/obsctl.py`: obs-websocket으로 StepCut 장면(앱 창만 캡처) 구성, 녹화 시작/중지, 녹화 기준 시각. 실측 오차 8ms
+- `stepcut/screengrab.py`: ffmpeg ddagrab로 모니터 녹화(기본, 30/60fps). `stepcut/screencast.py`: Chrome 스크린캐스트 프레임으로 녹화(창 숨김 가능). OBS 녹화기(`obsctl.py`)는 2026-11-27에 뺐습니다
 - `stepcut/runner.py`: 시나리오 실행, 단계마다 성공 확인, 실패하면 그 촬영을 버리고 재촬영
 - `stepcut/edit.py`: 로그 → 구간(대기 구간 컷/빨리감기), SRT, FCPXML, ffmpeg 미리보기
 - 실측: SpriteGen OBS 1회 촬영 성공, 재촬영 0회, 녹화 41초 + 편집 파일 생성 8초
@@ -60,7 +60,7 @@ brief.yaml ─(에이전트가 초안)─▶ scenario.yaml ─(사람 승인)─
 | 드라이버 동작 | 커서 이동 시작/끝, 클릭, 타이핑 글자, 스크롤, 파일 올리기 |
 | 페이지 안 이벤트 | 앱이 실제로 받은 클릭·입력, 화면 변화(결과 그림 등장 등). 페이지 시각을 녹화 시각으로 바꿔 기록 |
 | 앱 서버 | API 요청과 응답, 처리 시간 |
-| 녹화 상태 | OBS 시작/중지, 장면 전환, 떨어진 프레임 |
+| 녹화 상태 | 녹화 시작/중지, 프레임 수, 빠진·채운 프레임 |
 
 ```json
 {"t": 12.418, "src": "driver", "type": "click", "step": "open-text-method", "target": "button 문장참고", "x": 1510, "y": 22}
@@ -68,7 +68,7 @@ brief.yaml ─(에이전트가 초안)─▶ scenario.yaml ─(사람 승인)─
 
 자막, 클릭 확대, 대기 건너뛰기는 모두 이 이벤트 시각에 붙입니다.
 
-**싱크 검증**: 촬영 시작과 끝에 페이지 구석에 한 프레임짜리 표시를 띄우고, 영상에서 그 프레임을 찾아 실제 지연(화면 변화 → OBS 캡처)을 자동 보정합니다. 지금 시계 오차는 8ms(1프레임 미만)이고, 이 검사로 영상 자체를 기준으로 한 번 더 확인합니다. 차이가 2프레임을 넘으면 `check`가 경고합니다.
+**싱크 검증**: 촬영 시작과 끝에 페이지 구석에 한 프레임짜리 표시를 띄우고, 영상에서 그 프레임을 찾아 실제 지연(화면 변화 → 녹화)을 자동 보정합니다. 지금 시계 오차는 8ms(1프레임 미만)이고, 이 검사로 영상 자체를 기준으로 한 번 더 확인합니다. 차이가 2프레임을 넘으면 `check`가 경고합니다.
 
 ## 편집 데이터
 
@@ -93,7 +93,7 @@ history: [...]       # 도구 호출마다 한 줄
 | 분류 | 도구 | 하는 일 |
 | --- | --- | --- |
 | 녹화 | `list_scenarios` | `demos/*.yaml` 목록 |
-| | `run_scenario(scenario, allow_paid=false)` | OBS로 녹화, 실패 시 재촬영, run id 반환 |
+| | `run_scenario(scenario, allow_paid=false, recorder="screen")` | 화면 녹화, 실패 시 재촬영, run id 반환 |
 | 보기 | `list_runs` / `get_run(run)` | 단계·시간·자막·현재 편집·완성 길이 |
 | | `get_frames(run, step 또는 시각, timeline=source/output)` | 프레임 이미지를 돌려줘서 Claude가 직접 보고 판단 |
 | 편집 | `set_caption(run, step, text)` | 자막 수정 |
@@ -165,13 +165,13 @@ history: [...]       # 도구 호출마다 한 줄
 | 약속 | 내용 |
 | --- | --- |
 | `launch` / `close` | 앱을 켜고 끄기. 녹화 전 준비(`setup:`: 상태 초기화, 서버 깨우기, 에디터 로딩)는 녹화 밖에서 |
-| `window` | OBS가 잡을 창 (제목·클래스·exe) |
+| `window` | 앱 창 (제목, 전체 화면, 배율) |
 | `do(step)` | 화면 좌표가 아니라 앱이 아는 이름으로 조작 (웹: 역할·라벨, Godot: 노드·칸 이름, Unreal: MCP 도구) |
 | `check(expect)` | 단계 성공 확인 (화면 글자, 앱 상태, 로그 한 줄) |
 | `events` | 모든 동작을 녹화 시각으로 `events.jsonl`에 기록 |
-| `sync_marker` | 앱 창 구석에 자홍색 칸 표시. 앱이 못 그리면 OBS 장면의 색 소스를 켰다 끄는 방식으로 대신 |
+| `sync_marker` | 앱 창 구석에 자홍색 칸 표시. 앱이 못 그리면 녹화 쪽에서 표시를 넣는 방식이 필요합니다 |
 
-새로 넣을 단계 종류: `press` / `hold` / `keys`(키보드, 게임용), `drag`, `http`(앱 API 호출), `wait_log`(앱 로그에서 한 줄 기다리기). 창 두 개를 나란히 녹화하는 OBS 배치도 추가합니다 (온라인 대전용).
+새로 넣을 단계 종류: `press` / `hold` / `keys`(키보드, 게임용), `drag`, `http`(앱 API 호출), `wait_log`(앱 로그에서 한 줄 기다리기). 창 두 개를 나란히 녹화하는 배치도 추가합니다 (온라인 대전용).
 
 ### 프로젝트별
 
@@ -183,7 +183,7 @@ history: [...]       # 도구 호출마다 한 줄
 | GGPO Web Fighter | 웹 게임 (Canvas) | `web` + 키보드 단계 + 창 두 개 | 로컬 2인: 이동·펀치 콤보 입력. 온라인: 탭 두 개로 방 만들기/들어가기 | 온라인 서버(Render 무료)가 깨는 데 약 11초 → `setup:`에서 미리 깨움. 같은 PC 두 창을 나란히 녹화 |
 | Godot NNUE Chess | Godot 게임 | `godot` (새로) | 게임 안에 작은 StepCut 연결 스크립트(로컬 소켓)를 두고 "e2→e4 두기", "채팅 패널 글자 읽기"를 명령. `AI_SIDECAR_INJECT_UCI`로 AI 답을 고정해 매번 같은 판 | 연결 스크립트를 chess 저장소에 추가해야 함 (승인 필요). 이미 있는 `capture_gate_demo.gd`가 출발점 |
 | Unreal Prompt Editor | Unreal 에디터 플러그인 | `unreal` (새로) | 사이드카 HTTP `/prompt`로 문장 보내기, 플러그인 MCP 도구(180개)로 결과 확인(액터가 생겼는지 등), 승인 버튼은 사이드카 API로 | 에디터 로딩(1~2분)은 녹화 밖에서. 매 문장이 Cursor API 호출이라 `paid`이고, AI 답이 매번 달라 확인 조건을 느슨하게 둠. 실패 재촬영 횟수 제한 |
-| (그 밖의 Windows 앱) | 데스크톱 앱 | `uia` (나중) | Windows UI Automation으로 컨트롤 이름을 찾아 조작 | 앱이 마커를 못 그리므로 OBS 쪽 마커만 |
+| (그 밖의 Windows 앱) | 데스크톱 앱 | `uia` (나중) | Windows UI Automation으로 컨트롤 이름을 찾아 조작 | 앱이 마커를 못 그리므로 녹화 쪽 마커만 |
 
 ### 순서 제안
 

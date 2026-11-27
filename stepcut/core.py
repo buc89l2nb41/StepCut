@@ -184,7 +184,7 @@ def job_state(jid: str) -> dict:
 
 
 def dry_job(d: Path, log, headless: bool = True) -> dict:
-    """Test run without OBS. Headless by default so it never takes over the human's screen."""
+    """Test run (Playwright's own low-quality recording). Headless by default so it never takes over the screen."""
     from .runner import run
     rd = run(d, recorder="playwright", allow_paid=False, retries=0, log=log, headless=headless)
     take = json.loads((rd / "take1" / "steps.json").read_text(encoding="utf-8"))
@@ -193,9 +193,11 @@ def dry_job(d: Path, log, headless: bool = True) -> dict:
                       for s in take["steps"]]}
 
 
-def record_job(d: Path, allow_paid: bool, log) -> dict:
+def record_job(d: Path, allow_paid: bool, log, recorder: str = "screen", hidden: bool = False) -> dict:
     from .__main__ import full_run
-    s = full_run(d, recorder="obs", allow_paid=allow_paid, log=log)
+    if recorder not in ("screen", "screencast"):
+        raise ValueError(f"unknown recorder {recorder}")
+    s = full_run(d, recorder=recorder, allow_paid=allow_paid, log=log, headless=hidden and recorder == "screencast")
     if s.get("run_dir"):
         s["run"] = run_id(Path(s["run_dir"]))
     return s

@@ -14,7 +14,7 @@ Do not click the screen, do not drive DaVinci Resolve or any editor, do not edit
    - Captions: plain polite Korean ending in ~합니다, one sentence, under ~11 characters per second of hold.
 3. `dry_run(project)` and poll `get_job` every ~15 s. Fix failing selectors and dry-run again until every step passes.
 4. **Stop and ask the human to approve**: they run `python -m stepcut approve demos/<project>` (add `--allow-paid` only if they agree to paid steps). Do not continue until `get_project` shows `approved: true`.
-5. `run_scenario(project)` and poll `get_job`. It records with OBS, retries failed takes, renders a preview and runs `check`.
+5. `run_scenario(project)` and poll `get_job`. It records the screen (StepCut's own recorder, no OBS), retries failed takes, renders a preview and runs `check`.
 6. Review: `get_run`, `get_frames(run, step=...)` for each step, `check(run)`. Fix with `set_caption`, `edit_step` (trim / drop / speed / zoom), `set_global` (wait mode, intro/outro text, subtitle size). `undo` if a change is worse.
 7. `render(run)` again, `check(run)` until there are no errors (length in range, every `must_show` shown, no failed steps). Then `render(run, quality="final")`.
 8. Report to the human: final MP4 path, length, takes / retakes, sync offset, coverage, anything you could not fix, and the items under `avoid` they should check by eye.

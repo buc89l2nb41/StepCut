@@ -58,7 +58,7 @@ def ensure_app(cfg: dict, log) -> subprocess.Popen | None:
 
 
 class Clock:
-    """Fallback clock used when Playwright records the video itself."""
+    """Clock used when Playwright records the video itself (test runs)."""
 
     def __init__(self):
         self.t0 = time.monotonic()
@@ -70,30 +70,33 @@ class Clock:
 def run_take(cfg: dict, take_dir: Path, recorder: str, allow_paid: bool, log) -> dict:
     steps = [s for s in cfg["steps"] if allow_paid or not s.get("paid")]
     skipped = [s["id"] for s in cfg["steps"] if s.get("paid") and not allow_paid]
-    obs_rec = None
     video_dir = take_dir / "pw-video" if recorder == "playwright" else None
-    driver = WebDriver(cfg, record_video_dir=video_dir)
+    sc_rec = None
+    port = None
+    if recorder == "screencast":
+        from .screencast import free_port
+        port = free_port()
+    driver = WebDriver(cfg, record_video_dir=video_dir, debug_port=port)
     result = {"recorder": recorder, "steps": [], "ok": False, "skipped_paid": skipped}
     t_wall = time.monotonic()
     try:
         driver.launch()
-        if recorder == "obs":
-            from .obsctl import ObsRecorder
-            env = load_env(ROOT)
-            obs_rec = ObsRecorder(env.get("OBS_HOST", "localhost"), int(env.get("OBS_PORT", 4455)),
-                                  env.get("OBS_PASSWORD"), scene=cfg.get("record", {}).get("scene", "StepCut"))
-            result["versions"] = obs_rec.connect()
-            title = cfg.get("window", {}).get("title") or driver.window_title()
-            obs_rec.prepare(title, WebDriver.WINDOW_CLASS, WebDriver.EXE)
-            deadline = time.monotonic() + 8
-            while obs_rec.capture_size() == (0, 0):
-                if time.monotonic() > deadline:
-                    raise StepFailed(f"OBS could not find a window titled '{title}'")
-                time.sleep(0.2)
-            result["capture_size"] = obs_rec.capture_size()
-            time.sleep(0.5)
-            obs_rec.start()
-            clock = obs_rec
+        if recorder == "screencast":
+            from .screencast import ScreencastRecorder
+            rc = cfg.get("record", {})
+            sc_rec = ScreencastRecorder(port, driver.target_id(), take_dir / "frames",
+                                        quality=int(rc.get("jpeg_quality", 92)), fps=int(rc.get("fps", 30)))
+            time.sleep(0.3)
+            sc_rec.start()
+            clock = sc_rec
+        elif recorder == "screen":
+            from .screengrab import ScreenRecorder
+            rc = cfg.get("record", {})
+            sc_rec = ScreenRecorder(take_dir / "screen.mp4", fps=int(rc.get("fps", 30)),
+                                    monitor=int(rc.get("monitor", 0)))
+            time.sleep(float(rc.get("settle", 1.0)))  # let the full-screen (kiosk) window settle
+            sc_rec.start()
+            clock = sc_rec
         else:
             clock = Clock()
         events = EventLog(clock)
@@ -148,26 +151,22 @@ def run_take(cfg: dict, take_dir: Path, recorder: str, allow_paid: bool, log) ->
         time.sleep(0.3)
         driver.drain_page_events()
         result["t_last"] = round(clock.now(), 3)
-        if obs_rec:
-            result["clock_drift_s"] = round(obs_rec.drift(), 4)
-            try:
-                st = obs_rec.client.get_stats()
-                events.emit("rec", "obs-stats", render_skipped=st.render_skipped_frames,
-                            output_skipped=st.output_skipped_frames, output_total=st.output_total_frames)
-            except Exception:
-                pass
+        if sc_rec:
+            events.emit("rec", f"{recorder}-stats", **sc_rec.stats())
         events.emit("rec", "record-stop")
     except Exception as exc:
         result.setdefault("error", str(exc).splitlines()[0][:300])
         log(f"  take error: {result['error']}")
     finally:
-        if obs_rec and obs_rec.client:
+        if sc_rec:
             try:
-                if obs_rec.client.get_record_status().output_active:
-                    result["video"] = obs_rec.stop()
-            except Exception as exc:
-                result.setdefault("error", f"stop failed: {exc}")
-            obs_rec.restore()
+                result["video"] = sc_rec.stop(take_dir / f"{recorder}.mp4", log=log)
+                result["capture_size"] = [1920, 1080] if recorder == "screen" else list(sc_rec.size)
+                result[recorder] = sc_rec.stats()
+                if sc_rec.error:
+                    result.setdefault("error", sc_rec.error)
+            except Exception as exc:  # noqa: BLE001
+                result.setdefault("error", f"screencast encode failed: {exc}")
         if driver.events:
             driver.events.save(take_dir / "events.jsonl")
         pw_video = driver.close()
@@ -177,14 +176,18 @@ def run_take(cfg: dict, take_dir: Path, recorder: str, allow_paid: bool, log) ->
     return result
 
 
-def run(scenario_path: Path, recorder: str = "obs", allow_paid: bool = False,
-        retries: int | None = None, log=print, headless: bool = False) -> Path:
+def run(scenario_path: Path, recorder: str = "screen", allow_paid: bool = False,
+        retries: int | None = None, log=print, headless: bool = False, fps: int | None = None) -> Path:
     if scenario_path.is_dir():
         scenario_path = scenario_path / "scenario.yaml"
     cfg = load_scenario(scenario_path)
+    if fps:
+        cfg.setdefault("record", {})["fps"] = int(fps)
+    if recorder not in ("screen", "screencast", "playwright"):
+        raise ValueError(f"unknown recorder '{recorder}' (screen, screencast or playwright)")
     if headless:
-        if recorder == "obs":
-            raise ValueError("OBS recording needs a visible window")
+        if recorder == "screen":
+            raise ValueError("screen recording needs a visible window (use screencast for hidden runs)")
         cfg["_headless"] = True
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     from .core import slug

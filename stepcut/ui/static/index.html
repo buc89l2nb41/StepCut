@@ -119,6 +119,8 @@ video{width:100%;border-radius:8px;background:#000;max-height:360px}
         <button id="dry">시험 실행</button>
         <label class="hint"><input type="checkbox" id="paid"> 유료 단계 포함</label>
         <button class="go" id="approve">승인</button>
+        <select id="recorder" title="녹화 방식"><option value="screen">화면 녹화</option><option value="screencast">브라우저 녹화 (숨김 가능)</option></select>
+        <label class="hint" id="hiddenWrap" style="display:none"><input type="checkbox" id="hidden"> 창 숨기고 녹화</label>
         <button class="primary" id="record">녹화</button>
         <span id="apprstate" class="badge"></span>
       </div>
@@ -293,9 +295,17 @@ $('#approve').onclick = async () => {
 };
 $('#record').onclick = () => {
   if (!S.project) return;
-  if (!confirm('녹화를 시작할까요? 약 1분 동안 앱이 전체 화면으로 뜨고, OBS가 앱 창만 녹화합니다.')) return;
-  startJob(`/api/p/${S.project}/record`, {allow_paid: $('#paid').checked});
+  const recorder = $('#recorder').value, hidden = recorder === 'screencast' && $('#hidden').checked;
+  const how = recorder === 'screen' ? '약 1분 동안 앱이 전체 화면으로 뜨고, StepCut이 화면을 직접 녹화합니다. 그동안 화면을 건드리지 마세요.'
+    : hidden ? '보이지 않는 브라우저에서 StepCut이 직접 녹화합니다. 화면을 계속 쓰셔도 됩니다.'
+    : '약 1분 동안 앱이 전체 화면으로 뜨고, StepCut이 브라우저 화면을 직접 녹화합니다.';
+  if (!confirm('녹화를 시작할까요? ' + how)) return;
+  startJob(`/api/p/${S.project}/record`, {allow_paid: $('#paid').checked, recorder, hidden});
 };
+try { const r = localStorage.getItem('stepcut-recorder'); if (r && $(`#recorder option[value="${r}"]`)) $('#recorder').value = r; } catch (e) {}
+const syncRecorder = () => { $('#hiddenWrap').style.display = $('#recorder').value === 'screencast' ? '' : 'none';
+  try { localStorage.setItem('stepcut-recorder', $('#recorder').value); } catch (e) {} };
+$('#recorder').onchange = syncRecorder; syncRecorder();
 
 async function pollJob() {
   if (!S.job) return;

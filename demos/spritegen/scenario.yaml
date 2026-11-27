@@ -1,6 +1,5 @@
-# SpriteGen demo scenario. Features to show are listed in brief.yaml (driver: web / Playwright).
-# Default run makes no paid calls: it shows the input flow and opens results saved earlier.
-# Steps marked `paid: true` run only with --allow-paid (fal Kling, about $0.25 per take).
+# 참고 영상을 올려 적용한 뒤, 화면이 8칸 결과로 바뀌게 한다. 유료 생성은 없다.
+# 참고 파일은 0.77초라 화면에서 3초로 늘어 적용된다.
 project: SpriteGen
 driver: web
 app:
@@ -11,14 +10,14 @@ app:
     cwd: D:/Cursor/SpriteGen
     timeout: 60
 window:
-  title: SpriteGen        # OBS window capture matches this title
-  fullscreen: true        # 1920x1080 client area = OBS canvas, no scaling
-  scale: 1.25             # larger UI text for video
+  title: SpriteGen
+  fullscreen: true
+  scale: 1.25
 record:
   scene: StepCut
 retries: 2
 edit:
-  wait: speed             # speed | cut
+  wait: speed
   speed: 8
   keep: 0.4
   auto_wait: 2.0
@@ -29,97 +28,116 @@ edit:
 steps:
   - id: open
     do: goto
-    caption: SpriteGen은 캐릭터 그림 한 장으로 같은 캐릭터의 스프라이트 8장을 만드는 로컬 도구입니다.
+    caption: SpriteGen은 그림 한 장으로 같은 캐릭터의 스프라이트 8장을 만듭니다.
     expect: {text: 기준 그림}
-    hold: 3.2
+    hold: 3.4
+
+  - id: explain-character
+    do: pause
+    caption: 캐릭터에 올린 기준 그림 한 장을 세 방식이 함께 씁니다.
+    expect: {text: 세 방식 모두}
+    hold: 2.4
 
   - id: upload-character
     feature: reference-character
     do: upload
     target: 'input[type="file"]'
     file: D:/Cursor/SpriteGen/.gen/character.png
-    caption: 먼저 기준이 될 캐릭터 그림을 한 장 올립니다.
+    caption: 기준이 될 캐릭터 그림을 한 장 올립니다.
     expect: {images_loaded: 'img[alt="기준 캐릭터"]'}
     hold: 2.6
 
-  - id: open-text-method
+  - id: explain-text
+    feature: text-method
     do: click
     target: {role: button, name: 문장참고, exact: true}
-    caption: 문장참고 방식은 동작을 문장으로 적어 영상 모델에 보냅니다.
+    caption: 문장참고는 동작을 문장으로 적으면 보낼 문장을 만들어 줍니다.
     expect: {visible: {label: 동작 설명}}
-    hold: 1.4
+    hold: 2.6
 
   - id: type-name
     do: type
     target: {label: 동작 이름}
     text: 주먹
     expect: {value: {target: {label: 동작 이름}, equals: 주먹}}
-    hold: 0.4
+    hold: 0.5
 
   - id: type-action
-    feature: text-method
     do: type
     target: {label: 동작 설명}
     text: 주먹을 한 번 내지른다
-    caption: 동작 이름과 동작 설명을 적습니다.
+    caption: 동작 이름과 설명을 적으면 이 문장이 생성에 쓰입니다.
     expect: {value: {target: {label: 동작 설명}, equals: 주먹을 한 번 내지른다}}
-    hold: 0.8
+    hold: 2.2
 
   - id: show-prompt
     feature: text-method
     do: scroll
     target: {label: 보낼 문장}
-    caption: 옆모습, 고정 카메라, 단색 배경 같은 조건이 붙은 보낼 문장이 자동으로 만들어집니다.
+    caption: 옆모습과 고정 카메라 같은 조건이 보낼 문장에 자동으로 붙습니다.
     expect: {js: "() => [...document.querySelectorAll('textarea')].some(t => t.value.includes('주먹을 한 번 내지른다'))"}
-    hold: 3.4
+    hold: 3.0
 
-  # --- paid: real generation (skipped unless --allow-paid) ---
-  - id: arm-confirm
-    do: accept_dialogs
-    paid: true
-  - id: generate
+  - id: explain-pose
+    feature: pose-method
     do: click
-    target: {role: button, name: /한 편 뽑기/}
-    caption: 한 편 뽑기를 누르면 영상을 만들고 8칸으로 자릅니다.
-    paid: true
-    hold: 1.0
-  - id: wait-generate
-    do: wait
-    kind: wait
-    until: {js: "() => !document.querySelector('.progress-card') && document.querySelectorAll('.frame-pick img').length === 8"}
-    timeout: 900
-    caption: 영상 생성을 기다리는 구간은 빠르게 넘깁니다.
-    paid: true
-  # ---
+    target: {role: button, name: 포즈참고, exact: true}
+    caption: 포즈참고는 화면의 3D 몸에서 관절을 고쳐 동작을 정합니다.
+    expect: {visible: canvas}
+    hold: 2.4
 
-  - id: open-punch-result
+  - id: pose-rotate
+    do: click
+    target: {role: button, name: 회전, exact: true}
+    caption: 회전을 고르면 관절의 각도를 바꿀 수 있습니다.
+    expect: {visible: canvas}
+    hold: 1.8
+
+  - id: explain-video
+    feature: video-method
+    do: click
+    target: {role: button, name: 영상참고, exact: true}
+    caption: 영상참고는 참고 영상의 동작을 같은 캐릭터가 따라 하게 합니다.
+    expect: {text: 회색 인형 그림}
+    hold: 2.6
+
+  - id: type-video-name
+    do: type
+    target: {label: 동작 이름}
+    text: 승룡권
+    caption: 동작 이름을 승룡권으로 적습니다.
+    expect: {value: {target: {label: 동작 이름}, equals: 승룡권}}
+    hold: 1.8
+
+  - id: upload-reference
+    feature: video-method
+    do: upload
+    target: 'input[accept="video/mp4,video/webm"]'
+    file: D:/Claude/StepCut/demos/spritegen/refs/l7JW1lQPFEyfcxBSlBo3tyQR8zzqD3TrkFfpS26pdQAi4ADmkn5xQ3RAzLn9xC2w3LnVEyQ8Pv4ag87v28GZ7g.mp4
+    caption: 참고로 받은 승룡권 영상을 올립니다.
+    expect: {text: 3초로 늘렸습니다}
+    timeout: 45
+    hold: 3.2
+
+  - id: apply-reference
+    do: click
+    target: {role: button, name: /직접 올린 영상/}
+    caption: 올린 영상을 이 캐릭터가 따라 할 참고로 적용합니다.
+    expect: {visible: 'video.source-clip'}
+    hold: 2.4
+
+  - id: reveal-result
     feature: eight-frames
     do: click
-    target: {role: button, name: /#23 ·/}
-    caption: 만든 영상은 같은 간격의 8칸으로 잘려 스프라이트로 저장됩니다.
+    target: {role: button, name: /영상참고 · 승룡권/}
+    caption: 적용한 동작이 같은 캐릭터의 8칸 스프라이트로 나옵니다.
     expect: {images_loaded: '.frame-pick img'}
-    hold: 3.4
+    hold: 3.6
 
   - id: show-source-video
     feature: source-video
     do: click
     target: {role: button, name: 원본 영상 보기}
-    caption: 칸을 뽑아 낸 원본 영상도 함께 확인할 수 있습니다.
+    caption: 칸을 뽑아 낸 원본 영상도 함께 볼 수 있습니다.
     expect: {visible: '.player video'}
-    hold: 3.2
-
-  - id: open-uppercut-result
-    feature: video-method
-    do: click
-    target: {role: button, name: /#22 ·/}
-    caption: 영상참고 방식으로 만든 승룡권처럼, 참고 영상의 동작을 같은 캐릭터가 따라 합니다.
-    expect: {images_loaded: '.frame-pick img'}
-    hold: 3.6
-
-  - id: open-pose-method
-    feature: pose-method
-    do: click
-    target: {role: button, name: 포즈참고, exact: true}
-    caption: 포즈참고에서는 화면의 3D 몸에서 관절을 고쳐 동작을 정합니다.
-    expect: {visible: canvas}
-    hold: 3.6
+    hold: 3.4

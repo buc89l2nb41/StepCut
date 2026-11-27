@@ -34,7 +34,8 @@ def render_card(kind: str, spec: dict, out: Path) -> Path:
     for line in spec.get("lines", []) or []:
         parts.append(f'<div class="line">{html.escape(line)}</div>')
     with sync_playwright() as pw:
-        b = pw.chromium.launch()
+        from .web import browser_channel
+        b = pw.chromium.launch(**browser_channel(pw))
         pg = b.new_page(viewport={"width": 1920, "height": 1080})
         pg.set_content(CARD_HTML % "".join(parts))
         pg.wait_for_timeout(150)

@@ -1,6 +1,5 @@
 """StepCut command line (the MCP server exposes the same functions).
 
-  python -m stepcut check-obs                      OBS connection / versions
   python -m stepcut run demos/spritegen            record (retries failed takes), render preview, check
   python -m stepcut render runs/<project>/<stamp> [--final]
   python -m stepcut check  runs/<project>/<stamp>
@@ -26,30 +25,12 @@ def _print(obj) -> None:
     print(json.dumps(obj, ensure_ascii=False, indent=2))
 
 
-def cmd_check_obs(_args) -> int:
-    from .envfile import load_env
-    from .obsctl import ObsRecorder
-    env = load_env(ROOT)
-    rec = ObsRecorder(env.get("OBS_HOST", "localhost"), int(env.get("OBS_PORT", 4455)), env.get("OBS_PASSWORD"))
-    try:
-        print("OBS:", rec.connect())
-        v = rec.client.get_video_settings()
-        print("recording now:", rec.client.get_record_status().output_active)
-        print("record dir:", rec.client.get_record_directory().record_directory)
-        print(f"canvas: {v.base_width}x{v.base_height} @ {v.fps_numerator}/{v.fps_denominator}")
-        return 0
-    except Exception as exc:
-        print("OBS connection failed:", str(exc).splitlines()[0] if str(exc) else type(exc).__name__)
-        print("Is OBS open, with Tools > WebSocket Server Settings > Enable checked, and OBS_PASSWORD in .env?")
-        return 1
-
-
-def full_run(scenario: Path, recorder: str = "obs", allow_paid: bool = False, retries: int | None = None,
-             render_quality: str = "preview", log=print) -> dict:
+def full_run(scenario: Path, recorder: str = "screen", allow_paid: bool = False, retries: int | None = None,
+             render_quality: str = "preview", log=print, headless: bool = False, fps: int | None = None) -> dict:
     from .render import check, render
     from .runner import run
     t0 = time.monotonic()
-    run_dir = run(scenario, recorder=recorder, allow_paid=allow_paid, retries=retries, log=log)
+    run_dir = run(scenario, recorder=recorder, allow_paid=allow_paid, retries=retries, log=log, headless=headless, fps=fps)
     summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
     if not summary["ok"]:
         return summary
@@ -64,7 +45,7 @@ def full_run(scenario: Path, recorder: str = "obs", allow_paid: bool = False, re
 
 def cmd_run(args) -> int:
     s = full_run(Path(args.scenario), args.recorder, args.allow_paid, args.retries,
-                 "final" if args.final else "preview")
+                 "final" if args.final else "preview", headless=args.hidden, fps=args.fps)
     _print(s)
     return 0 if s.get("ok") else 1
 
@@ -148,10 +129,12 @@ def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     p = argparse.ArgumentParser(prog="stepcut")
     sub = p.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("check-obs").set_defaults(fn=cmd_check_obs)
     r = sub.add_parser("run")
     r.add_argument("scenario", help="demos/<project> folder or a scenario.yaml")
-    r.add_argument("--recorder", choices=["obs", "playwright"], default="obs")
+    r.add_argument("--recorder", choices=["screen", "screencast", "playwright"], default="screen",
+                   help="screen = ffmpeg screen capture, screencast = browser frames (can run --hidden)")
+    r.add_argument("--fps", type=int, default=None, help="built-in recorders: frames per second (default 30)")
+    r.add_argument("--hidden", action="store_true", help="screencast only: record in a hidden browser")
     r.add_argument("--allow-paid", action="store_true", help="also run steps marked paid: true")
     r.add_argument("--retries", type=int, default=None)
     r.add_argument("--final", action="store_true")

@@ -1,7 +1,7 @@
 """Playwright driver for web projects.
 
 Elements are found by role / label / text / CSS (never screen coordinates). Because the
-OBS capture hides the real mouse, a drawn cursor is moved to each element before it is
+recording hides the real mouse, a drawn cursor is moved to each element before it is
 clicked so the viewer can follow the action.
 """
 from __future__ import annotations
@@ -82,12 +82,21 @@ def locate(page: Page, target: Any) -> Locator:
     return loc.nth(nth) if nth is not None else loc.first
 
 
+def browser_channel(pw) -> dict:
+    """{} when Playwright's own Chromium is installed, else use the installed Google Chrome."""
+    if Path(pw.chromium.executable_path).exists():
+        return {}
+    # Chrome shows a warning bar for --no-sandbox, so keep its sandbox on.
+    return {"channel": "chrome", "chromium_sandbox": True}
+
+
 class WebDriver:
     WINDOW_CLASS = "Chrome_WidgetWin_1"
     EXE = "chrome.exe"
 
-    def __init__(self, cfg: dict, record_video_dir: Path | None = None):
+    def __init__(self, cfg: dict, record_video_dir: Path | None = None, debug_port: int | None = None):
         self.cfg = cfg
+        self.debug_port = debug_port  # extra DevTools port for the built-in screencast recorder
         self.window = cfg.get("window", {})
         self.record_video_dir = record_video_dir
         self._pw = None
@@ -106,7 +115,7 @@ class WebDriver:
         args = [f"--app={url}", f"--force-device-scale-factor={scale}", "--disable-infobars",
                 "--no-first-run", "--no-default-browser-check", "--disable-features=Translate"]
         if self.window.get("fullscreen", True):
-            args.append("--start-fullscreen")
+            args.append("--kiosk")  # full screen without the Esc toast or the exit (x) button
         else:
             w, h = self.window.get("width", 1600), self.window.get("height", 900)
             args += [f"--window-size={w},{h}", "--window-position=40,40"]
@@ -116,12 +125,16 @@ class WebDriver:
         headless = bool(self.cfg.get("_headless"))
         if headless:
             # Test runs: same 1920x1080 picture, but no window on the human's screen.
-            kwargs = dict(headless=True, locale="ko-KR", device_scale_factor=scale,
+            kwargs = dict(headless=True, channel="chromium", locale="ko-KR", device_scale_factor=scale,
                           viewport={"width": round(1920 / scale), "height": round(1080 / scale)},
                           args=["--disable-features=Translate", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
+        if self.debug_port:
+            kwargs["args"] = kwargs["args"] + [f"--remote-debugging-port={self.debug_port}"]
         if self.record_video_dir:
             kwargs["record_video_dir"] = str(self.record_video_dir)
             kwargs["record_video_size"] = {"width": 1920, "height": 1080}
+        # Without Playwright's own Chromium, the installed Chrome runs on a fresh temporary profile.
+        kwargs.update(browser_channel(self._pw))
         self.ctx = self._pw.chromium.launch_persistent_context(self._profile, **kwargs)
         self.ctx.add_init_script(CURSOR_JS)
         self.ctx.add_init_script(PAGE_EVENTS_JS)
@@ -134,6 +147,13 @@ class WebDriver:
         self.page.evaluate(PAGE_EVENTS_JS)
         self.dpr = float(self.page.evaluate("() => devicePixelRatio"))
         self.page.on("requestfinished", self._on_request)
+        # A click that opens a file picker would show an OS dialog (with the user's folders) on screen.
+        # With a listener attached, Playwright never shows it; uploads use set_input_files instead.
+        self.page.on("filechooser", self._on_filechooser)
+
+    def _on_filechooser(self, _chooser) -> None:
+        if self.events:
+            self.events.emit("driver", "filechooser-suppressed")
 
     def _on_request(self, req) -> None:
         if not self.events or req.resource_type not in ("fetch", "xhr", "document"):
@@ -166,11 +186,18 @@ class WebDriver:
                 it["px"] = [round(it["x"] * self.dpr), round(it["y"] * self.dpr)]
             self.events.emit_epoch("page", typ, epoch, **it)
 
-    def sync_marker(self, label: str, frames: int = 4) -> float:
+    def sync_marker(self, label: str, frames: int = 10) -> float:  # ~170 ms: long enough for 7 fps screencasts
         """Shows the magenta corner block; returns its paint time on the recording clock."""
         epoch = self.page.evaluate(MARKER_JS, frames)
         ev = self.events.emit_epoch("sync", "marker", epoch, label=label, frames=frames)
         return ev["t"]
+
+    def target_id(self) -> str:
+        cdp = self.ctx.new_cdp_session(self.page)
+        try:
+            return cdp.send("Target.getTargetInfo")["targetInfo"]["targetId"]
+        finally:
+            cdp.detach()
 
     def window_title(self) -> str:
         return self.page.title()

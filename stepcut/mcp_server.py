@@ -176,15 +176,16 @@ def get_job(job: str) -> dict:
 @mcp.tool()
 @_safe
 def dry_run(project: str) -> dict:
-    """Replay the scenario in an invisible (headless) browser without OBS to test selectors.
+    """Replay the scenario in an invisible (headless) browser to test selectors.
     Needs no approval and does not touch the human's screen. Returns a job id; poll get_job."""
     return start_job("dry", dry_job, exclusive=False, d=_project_dir(project), headless=True)
 
 
 @mcp.tool()
 @_safe
-def run_scenario(project: str, allow_paid: bool = False) -> dict:
-    """Record the approved scenario with OBS (retries failed takes), render a preview and check it.
+def run_scenario(project: str, allow_paid: bool = False, recorder: str = "screen") -> dict:
+    """Record the approved scenario (retries failed takes), render a preview and check it.
+    recorder: "screen" (ffmpeg screen capture, full screen app) or "screencast" (browser frames).
     Requires the human approval of this exact scenario. Returns a job id; poll get_job."""
     if ui_active():
         return _err("In the StepCut UI the human starts recording with the Record button. "
@@ -196,7 +197,7 @@ def run_scenario(project: str, allow_paid: bool = False) -> dict:
         return _err(f"scenario {why}. Ask the human to run: python -m stepcut approve demos/{d.name}")
     if allow_paid and not st.get("allow_paid"):
         return _err(f"paid steps need: python -m stepcut approve demos/{d.name} --allow-paid")
-    return start_job("run", record_job, exclusive=True, d=d, allow_paid=allow_paid)
+    return start_job("run", record_job, exclusive=True, d=d, allow_paid=allow_paid, recorder=recorder)
 
 
 # ------------------------------------------------------------------ runs

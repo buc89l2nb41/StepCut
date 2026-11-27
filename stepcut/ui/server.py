@@ -192,7 +192,8 @@ def approve(project: str, allow_paid: bool = Body(False, embed=True), x_stepcut_
 
 
 @app.post("/api/p/{project}/record")
-def record(project: str, allow_paid: bool = Body(False, embed=True), x_stepcut_token: str | None = Header(None)):
+def record(project: str, allow_paid: bool = Body(False), recorder: str = Body("screen"), hidden: bool = Body(False),
+           x_stepcut_token: str | None = Header(None)):
     _human(x_stepcut_token)
     d = project_dir(project)
     st = approval_state(d)
@@ -200,7 +201,10 @@ def record(project: str, allow_paid: bool = Body(False, embed=True), x_stepcut_t
         raise HTTPException(400, "approve the current scenario first")
     if allow_paid and not st.get("allow_paid"):
         raise HTTPException(400, "paid steps were not approved")
-    return start_job("run", core.record_job, exclusive=True, d=d, allow_paid=allow_paid)
+    if recorder not in ("screen", "screencast"):
+        raise HTTPException(400, "recorder must be screen or screencast")
+    return start_job("run", core.record_job, exclusive=True, d=d, allow_paid=allow_paid, recorder=recorder,
+                     hidden=hidden)
 
 
 @app.get("/api/jobs")

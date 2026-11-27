@@ -16,7 +16,7 @@ def load_env(root: Path) -> dict[str, str]:
             key, _, value = line.partition("=")
             values[key.strip()] = value.strip().strip('"').strip("'")
     # Real environment variables win over the file.
-    for key in ("OBS_HOST", "OBS_PORT", "OBS_PASSWORD", "CURSOR_API_KEY", "STEPCUT_AGENT_MODEL"):
+    for key in ("CURSOR_API_KEY", "STEPCUT_AGENT_MODEL"):
         if os.environ.get(key):
             values[key] = os.environ[key]
     return values
